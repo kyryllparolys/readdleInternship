@@ -14,7 +14,7 @@ import (
 type Holiday struct {
 	Name        string      `json:"name"`
 	CountryCode string      `json:"countryCode"`
-	Date       	string     `json:"date"`
+	Date        string      `json:"date"`
 	Fixed       bool        `json:"fixed"`
 	Global      bool        `json:"global"`
 	Counties    interface{} `json:"counties"`
@@ -37,10 +37,7 @@ func isAdjacent(date time.Time, adjacent bool) (time.Time, bool) {
 	return date, adjacent
 }
 
-func main() {
-	var arr []Holiday
-	t := time.Now()
-	url := fmt.Sprintf("https://date.nager.at/api/v2/publicholidays/%d/UA", t.Year())
+func getHolidays(url string) []byte {
 	response, err := http.Get(url)
 	if err != nil {
 		fmt.Printf("%s", err)
@@ -54,11 +51,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = json.Unmarshal([]byte(contents), &arr)
+	return contents
+}
+
+func main() {
+	var arr []Holiday
+	t := time.Now()
+	url := fmt.Sprintf("https://date.nager.at/api/v2/publicholidays/%d/UA", t.Year())
+
+	contents := getHolidays(url)
+
+	err := json.Unmarshal(contents, &arr) // save to the array
 	if err != nil {
 		fmt.Printf("%s", err)
 		os.Exit(1)
 	}
+
 	for _, foo := range arr {
 		holiday, err := time.Parse("2006-01-02", foo.Date)
 		if err != nil {
@@ -67,7 +75,7 @@ func main() {
 		}
 
 		if holiday.After(t) {
-			nextDay := holiday.AddDate( 0, 0, 1)
+			nextDay := holiday.AddDate(0, 0, 1)
 
 			var lastDay time.Time
 			var adjacent bool
@@ -76,10 +84,9 @@ func main() {
 			}
 
 			if adjacent {
-				//TODO: Test adjacent
 				daysBetween := lastDay.Sub(holiday).Hours() / 24
 				fmt.Printf(
-					"The next holiday is %v. It will last for %v days. From %v %v till %v %v",
+					"The next holiday is '%s'. It will last for %v days. From %v %v till %v %v",
 					foo.Name,
 					daysBetween,
 					holiday.Month(),
@@ -87,7 +94,7 @@ func main() {
 					lastDay.Month(),
 					lastDay.Day())
 			} else {
-				fmt.Printf("The next holiday %v is on: %v %v", foo.Name, holiday.Month(), holiday.Day())
+				fmt.Printf("The next holiday: '%v' is on %v %v", foo.Name, holiday.Month(), holiday.Day())
 			}
 			break
 		}
